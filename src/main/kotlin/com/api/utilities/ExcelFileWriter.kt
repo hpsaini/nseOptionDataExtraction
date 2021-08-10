@@ -1,7 +1,6 @@
-package fileWriterClass
+package com.api.utilities
 
 import com.api.constants.ProjectProperties
-import com.api.utilities.*
 import org.apache.log4j.Logger
 import org.apache.poi.ss.usermodel.*
 import org.apache.poi.xssf.usermodel.XSSFRow
@@ -13,15 +12,22 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
 
-class ExcelFileWriter(private val sheetName: String, private val symbol:String, private val strikePrice: String) {
-
+class ExcelFileWriter(
+    private val optionExpirtDate: String,
+    private val symbol: String,
+    private val strikePrice: String
+) {
     private val OUTPUT_DIRECTORY: String = ProjectProperties.ROOT_JSON_FOLDER_PATH
-    private var WORKBOOK_NAME = sheetName
+    private var WORKBOOK_NAME = optionExpirtDate.replace("-", "")
     private lateinit var currentWorksheet: String
-    private val fileName = "${Util().getFolderRootPath()}$OUTPUT_DIRECTORY/${TimeUtil.getDate()}_${WORKBOOK_NAME}_${symbol}_${strikePrice}.xlsx"
+    private val fileName =
+        "${Util().getFolderRootPath()}$OUTPUT_DIRECTORY/${TimeUtil.getDate()}_${WORKBOOK_NAME}_${symbol}_${strikePrice}.xlsx"
     private var workbook: XSSFWorkbook = XSSFWorkbook()
     private lateinit var defaultWorkSheet: Sheet
     private val logger = Logger.getLogger("ExcelFileWriter")
+    private val referenceFilePath = "${Util().getFolderRootPath()}/src/main/resources/ReferenceSheet.xlsx"
+
+
 
 
     //Write Headers to file by default
@@ -53,6 +59,7 @@ class ExcelFileWriter(private val sheetName: String, private val symbol:String, 
             logger.debug("Retrieving Sheet: $currentWorksheet")
         }
     }
+
     private fun addNewWorkBook(referenceFilePath: String) {
         if (workbook.getSheet(currentWorksheet) == null || workbook.getSheet(currentWorksheet).equals("")) {
             val inputStream = FileInputStream(referenceFilePath)
@@ -119,21 +126,20 @@ class ExcelFileWriter(private val sheetName: String, private val symbol:String, 
                 addDataToNewSheet(strikePrice, callDataMap, putDataMap)
             }
         } else {
-            val referenceFilePath ="${Util().getFolderRootPath()}/src/main/resources/ReferenceSheet.xlsx"
+            val referenceFilePath = "${Util().getFolderRootPath()}/src/main/resources/ReferenceSheet.xlsx"
             makeDirectory(OUTPUT_DIRECTORY)
-            if(File(referenceFilePath).exists()){
+            if (File(referenceFilePath).exists()) {
                 println("Reference sheet found, creating new entry for $strikePrice sheet")
                 //create excel and add data
                 addNewWorkBook(referenceFilePath)
                 addSheetHeaders()
                 addDataToNewSheet(strikePrice, callDataMap, putDataMap)
-            }else{
+            } else {
                 println("Reference sheet not found, creating new file sheet")
                 addNewWorkSheets()
                 addSheetHeaders()
                 addDataToNewSheet(strikePrice, callDataMap, putDataMap)
             }
-
 
 
         }
@@ -229,18 +235,18 @@ class ExcelFileWriter(private val sheetName: String, private val symbol:String, 
         } else {
             "INTRADAY_DATA"
         }
-        if ( workbook.getSheetName(0).equals("SAMPLE_SUMMARY")){
+
+        if (workbook.getSheetName(0).equals("SAMPLE_SUMMARY")) {
             //workbook.getSheet(currentWorksheet) == null || workbook.getSheet(currentWorksheet).equals("") ||
             val inputStream = FileInputStream(fileName)
             workbook = XSSFWorkbook(inputStream)
-            workbook.setSheetName(0,currentWorksheet)
+            workbook.setSheetName(0, currentWorksheet)
             defaultWorkSheet = workbook.getSheet(currentWorksheet)
             logger.debug("Selected Sheet: $defaultWorkSheet")
             val lastColumnNumber = defaultWorkSheet.lastRowNum
             val row: Row = defaultWorkSheet.createRow(lastColumnNumber)
-            writeSummaryData(row,callDataMap,putDataMap,isOnlyOneStrikePriceEntry,strikePrice)
-        }
-        else if(workbook.getSheet(currentWorksheet) == null){
+            writeSummaryData(row, callDataMap, putDataMap, isOnlyOneStrikePriceEntry, strikePrice)
+        } else if (workbook.getSheet(currentWorksheet) == null) {
             defaultWorkSheet = workbook.createSheet(currentWorksheet);
             logger.debug("Added Sheet: $currentWorksheet")
             val row: org.apache.poi.ss.usermodel.Row = defaultWorkSheet.createRow(0)
@@ -266,8 +272,8 @@ class ExcelFileWriter(private val sheetName: String, private val symbol:String, 
             logger.debug("Added Headers with styles to the Sheet")
             val lastColumnNumber = defaultWorkSheet.lastRowNum
             val newRow: Row = defaultWorkSheet.createRow(lastColumnNumber + 1)
-            writeSummaryData(newRow,callDataMap,putDataMap,isOnlyOneStrikePriceEntry,strikePrice)
-        }else{
+            writeSummaryData(newRow, callDataMap, putDataMap, isOnlyOneStrikePriceEntry, strikePrice)
+        } else {
             defaultWorkSheet = workbook.getSheet(currentWorksheet)
             logger.debug("Retrieving Sheet: $currentWorksheet")
             val inputStream = FileInputStream(fileName)
@@ -275,89 +281,91 @@ class ExcelFileWriter(private val sheetName: String, private val symbol:String, 
             val currentWorksheet = workbook.getSheet(currentWorksheet)
             val lastColumnNumber = currentWorksheet.lastRowNum
             val row = currentWorksheet.createRow(lastColumnNumber + 1)
-            writeSummaryData(row,callDataMap,putDataMap,isOnlyOneStrikePriceEntry,strikePrice)
+            writeSummaryData(row, callDataMap, putDataMap, isOnlyOneStrikePriceEntry, strikePrice)
         }
         commit(strikePrice)
 
     }
-private fun writeSummaryData(
-    row: Row,
-    callDataMap: HashMap<Int, DerivativeData>,
-    putDataMap: HashMap<Int, DerivativeData>,
-    isOnlyOneStrikePriceEntry: Boolean,
-    strikePrice: Int
-){
-    val timeStampCell = row.createCell(0)
-    timeStampCell.setCellValue(TimeUtil.getExecutionTimeStamp().toDouble())
 
-    var totalCallChangeInOpenInterest = 0.00
-    var totalPutChangeInOpenInterest = 0.00
-    var totalCallVolume= 0.0
-    var totalPutVolume= 0.0
-    var totalCallLtp=0.00
-    var totalPutLtp=0.00
+    private fun writeSummaryData(
+        row: Row,
+        callDataMap: HashMap<Int, DerivativeData>,
+        putDataMap: HashMap<Int, DerivativeData>,
+        isOnlyOneStrikePriceEntry: Boolean,
+        strikePrice: Int
+    ) {
+        val timeStampCell = row.createCell(0)
+        timeStampCell.setCellValue(TimeUtil.getExecutionTimeStamp().toDouble())
 
-    for ((key, value) in callDataMap) {
-        print("key value in callDataMap $key")
-        totalCallChangeInOpenInterest += callDataMap[key]?.changeInOPenInterest!!
-        totalCallVolume += callDataMap[key]?.volume!!
-        totalCallLtp += callDataMap[key]?.ltp!!.toDouble()
-        print("OI change value in callDataMap after adding ${callDataMap[key]?.changeInOPenInterest!!}  = $totalCallChangeInOpenInterest")
-        print("Volume change in callDataMap after adding ${callDataMap[key]?.volume!!}  = $totalCallVolume")
+        var totalCallChangeInOpenInterest = 0.00
+        var totalPutChangeInOpenInterest = 0.00
+        var totalCallVolume = 0.0
+        var totalPutVolume = 0.0
+        var totalCallLtp = 0.00
+        var totalPutLtp = 0.00
 
+        for ((key, value) in callDataMap) {
+            print("key value in callDataMap $key")
+            totalCallChangeInOpenInterest += callDataMap[key]?.changeInOPenInterest!!
+            totalCallVolume += callDataMap[key]?.volume!!
+            totalCallLtp += callDataMap[key]?.ltp!!.toDouble()
+            print("OI change value in callDataMap after adding ${callDataMap[key]?.changeInOPenInterest!!}  = $totalCallChangeInOpenInterest")
+            print("Volume change in callDataMap after adding ${callDataMap[key]?.volume!!}  = $totalCallVolume")
+
+        }
+        for ((key, value) in putDataMap) {
+            print("key value in putDataMap $key")
+            totalPutChangeInOpenInterest += putDataMap[key]?.changeInOPenInterest!!
+            totalPutVolume += putDataMap[key]?.volume!!
+            totalPutLtp += putDataMap[key]?.ltp!!.toDouble()
+            print("value in putDataMap after adding ${putDataMap[key]?.changeInOPenInterest!!}  = $totalPutChangeInOpenInterest")
+            print("Volume change in callDataMap after adding ${putDataMap[key]?.volume!!}  = $totalPutVolume")
+        }
+
+        val averageCallLtp = totalCallLtp / callDataMap.size
+        val averagePutLtp = totalPutLtp / putDataMap.size
+
+        val totalCallChangeInOpenIny: Cell = row.createCell(1)
+
+        totalCallChangeInOpenIny.setCellValue(totalCallChangeInOpenInterest)
+
+        val totalPutChangeInOpenInterestCell = row.createCell(2)
+        totalPutChangeInOpenInterestCell.setCellValue(totalPutChangeInOpenInterest)
+
+        val totalOpenInterestChange = row.createCell(3)
+        row.createCell(4).setCellValue(totalCallVolume)
+        row.createCell(5).setCellValue(totalPutVolume)
+        val totalChangeInOpenInterest = totalPutChangeInOpenInterest - totalCallChangeInOpenInterest
+        totalOpenInterestChange.setCellValue(totalChangeInOpenInterest)
+
+        val totalVolumeChange = row.createCell(6)
+        val totalVolumeChangeInVolume = totalPutVolume - totalCallVolume
+        totalVolumeChange.setCellValue(totalVolumeChangeInVolume)
+        setStyle(totalVolumeChange, totalVolumeChangeInVolume)
+
+        val tradeSignalCell = row.createCell(7)
+        setStyle(totalOpenInterestChange, totalChangeInOpenInterest)
+        if (setStyle(totalOpenInterestChange, totalChangeInOpenInterest)) {
+            tradeSignalCell.setCellValue("BUY")
+            tradeSignal(tradeSignalCell, true)
+        } else {
+            tradeSignalCell.setCellValue("SELL")
+            tradeSignal(tradeSignalCell, false)
+
+        }
+        if (isOnlyOneStrikePriceEntry) {
+            val callData = callDataMap[strikePrice]
+            val putData = putDataMap[strikePrice]
+            row.createCell(8).setCellValue(callData?.vwap!!.toDouble())
+            row.createCell(9).setCellValue(callData.ltp!!.toDouble())
+            row.createCell(10).setCellValue(putData?.vwap!!.toDouble())
+            row.createCell(11).setCellValue(putData.ltp!!.toDouble())
+            row.createCell(12).setCellValue(averageCallLtp)
+            row.createCell(13).setCellValue(averagePutLtp)
+            row.createCell(14).setCellValue(averagePutLtp - averageCallLtp)
+        }
     }
-    for ((key, value) in putDataMap) {
-        print("key value in putDataMap $key")
-        totalPutChangeInOpenInterest += putDataMap[key]?.changeInOPenInterest!!
-        totalPutVolume += putDataMap[key]?.volume!!
-        totalPutLtp += putDataMap[key]?.ltp!!.toDouble()
-        print("value in putDataMap after adding ${putDataMap[key]?.changeInOPenInterest!!}  = $totalPutChangeInOpenInterest")
-        print("Volume change in callDataMap after adding ${putDataMap[key]?.volume!!}  = $totalPutVolume")
-    }
 
-    val averageCallLtp = totalCallLtp/callDataMap.size
-    val averagePutLtp = totalPutLtp/putDataMap.size
-
-    val totalCallChangeInOpenIny: Cell = row.createCell(1)
-
-    totalCallChangeInOpenIny.setCellValue(totalCallChangeInOpenInterest)
-
-    val totalPutChangeInOpenInterestCell = row.createCell(2)
-    totalPutChangeInOpenInterestCell.setCellValue(totalPutChangeInOpenInterest)
-
-    val totalOpenInterestChange = row.createCell(3)
-    row.createCell(4).setCellValue(totalCallVolume)
-    row.createCell(5).setCellValue(totalPutVolume)
-    val totalChangeInOpenInterest = totalPutChangeInOpenInterest - totalCallChangeInOpenInterest
-    totalOpenInterestChange.setCellValue(totalChangeInOpenInterest)
-
-    val totalVolumeChange = row.createCell(6)
-    val totalVolumeChangeInVolume =totalPutVolume - totalCallVolume
-    totalVolumeChange.setCellValue(totalVolumeChangeInVolume)
-    setStyle(totalVolumeChange, totalVolumeChangeInVolume)
-
-    val tradeSignalCell = row.createCell(7)
-    setStyle(totalOpenInterestChange, totalChangeInOpenInterest)
-    if (setStyle(totalOpenInterestChange, totalChangeInOpenInterest)) {
-        tradeSignalCell.setCellValue("BUY")
-        tradeSignal(tradeSignalCell, true)
-    } else {
-        tradeSignalCell.setCellValue("SELL")
-        tradeSignal(tradeSignalCell, false)
-
-    }
-    if (isOnlyOneStrikePriceEntry) {
-        val callData = callDataMap[strikePrice]
-        val putData = putDataMap[strikePrice]
-        row.createCell(8).setCellValue(callData?.vwap!!.toDouble())
-        row.createCell(9).setCellValue(callData.ltp!!.toDouble())
-        row.createCell(10).setCellValue(putData?.vwap!!.toDouble())
-        row.createCell(11).setCellValue(putData.ltp!!.toDouble())
-        row.createCell(12).setCellValue(averageCallLtp)
-        row.createCell(13).setCellValue(averagePutLtp)
-        row.createCell(14).setCellValue(averagePutLtp-averageCallLtp)
-    }
-}
     private fun tradeSignal(cell: Cell, boolean: Boolean) {
         if (boolean) {
             val style = workbook.createCellStyle()
@@ -406,28 +414,45 @@ private fun writeSummaryData(
         cell.cellStyle = style
 
     }
+
     fun addMarketDirectionRawData(
+        marketDirectionStrikePriceArray: IntArray,
         underlyingValue: Int,
         callDataMap: HashMap<Int, MarketDirectionData>,
         putDataMap: HashMap<Int, MarketDirectionData>
     ) {
         currentWorksheet = "RAW_DATA"
-        if (File(fileName).exists() ) {
-            if (checkWorkSheetExists()){
+        if (File(fileName).exists()) {
+            if (checkWorkSheetExists()) {
                 println("worksheet found for $currentWorksheet")
                 defaultWorkSheet = workbook.getSheet(currentWorksheet)
-                addDataToExistingRawSheet(underlyingValue,callDataMap, putDataMap)
-            }
-            else{
+                addDataToExistingRawSheet(underlyingValue, callDataMap, putDataMap)
+            } else {
                 addNewWorkBook(fileName)
+                val atTheMoneyStrikePrice =
+                    marketDirectionStrikePriceArray[(marketDirectionStrikePriceArray.size - 1) / 2]
+                val strikePointDifference = marketDirectionStrikePriceArray[1] - marketDirectionStrikePriceArray[0]
+                addStrikePriceEntries(strikePointDifference, atTheMoneyStrikePrice)
                 createNewRawSheetHeaders(underlyingValue)
-                addDataToNewRawSheet(underlyingValue,callDataMap, putDataMap)
+                addDataToNewRawSheet(underlyingValue, callDataMap, putDataMap)
 
             }
-        }else{
-         Assert.fail()
+        } else {
+            Assert.fail()
         }
         commit(strikePrice.toInt())
+
+    }
+
+    private fun addStrikePriceEntries(strikePricePointDifference: Int, underlyingValue: Int) {
+        val strikePriceVariation = 60
+        var firstStrikePrice = underlyingValue - (strikePricePointDifference * strikePriceVariation)
+        defaultWorkSheet.createRow(0).createCell(0).setCellValue("StrikePrice")
+        for (i in 1..(strikePriceVariation * 2) + 1) {
+            defaultWorkSheet.createRow(i).createCell(0).setCellValue(firstStrikePrice.toDouble())
+            firstStrikePrice += strikePricePointDifference
+        }
+        commit(underlyingValue)
 
     }
 
@@ -439,13 +464,20 @@ private fun writeSummaryData(
         defaultWorkSheet.getRow(0)
         val firstRow = defaultWorkSheet.getRow(0)
         val lastCellNumber = firstRow.lastCellNum
-        val executionCount = ((lastCellNumber+1)/4)+1
+        val executionCount = ((lastCellNumber + 1) / 4) + 1
 //
-        firstRow.createCell(lastCellNumber + 1).setCellValue("${executionCount}.TIME_${TimeUtil.getExecutionTimeStamp()}-${underlyingValue}")
+        firstRow.createCell(lastCellNumber + 1)
+            .setCellValue("${executionCount}.TIME_${TimeUtil.getExecutionTimeStamp()}-${underlyingValue}")
         firstRow.createCell(lastCellNumber + 2).setCellValue("Call OI Change")
         firstRow.createCell(lastCellNumber + 3).setCellValue("Put OI Change")
-
         var rowNumber = 1
+
+        val firstStrikePrice = callDataMap.toSortedMap().firstKey()
+        for (i in 1..defaultWorkSheet.lastRowNum) {
+            if (defaultWorkSheet.getRow(i).getCell(0).toString().substringBefore(".") == firstStrikePrice.toString()) {
+                rowNumber = i;
+            }
+        }
         for (value in callDataMap.toSortedMap()) {
             val currentRow = defaultWorkSheet.getRow(rowNumber)
             currentRow.createCell(lastCellNumber + 1).setCellValue(0.0 + value.key.toInt())
@@ -454,28 +486,37 @@ private fun writeSummaryData(
             rowNumber += 1
         }
     }
+
     private fun createNewRawSheetHeaders(underlyingValue: Int) {
         val firstRow = defaultWorkSheet.createRow(0)
-        firstRow.createCell(0).setCellValue("1.TIME_${TimeUtil.getExecutionTimeStamp()}-${underlyingValue}")
-        firstRow.createCell(1).setCellValue("Call OI Change")
-        firstRow.createCell(2).setCellValue("Put OI Change")
+        firstRow.createCell(1).setCellValue("1.TIME_${TimeUtil.getExecutionTimeStamp()}-${underlyingValue}")
+        firstRow.createCell(2).setCellValue("Call OI Change")
+        firstRow.createCell(3).setCellValue("Put OI Change")
 
 
     }
+
     private fun addDataToNewRawSheet(
         underlyingValue: Int,
         callDataMap: HashMap<Int, MarketDirectionData>,
         putDataMap: HashMap<Int, MarketDirectionData>
     ) {
         var rowNumber = 1
+        val firstStrikePrice = callDataMap.toSortedMap().firstKey()
+        for (i in 1..defaultWorkSheet.lastRowNum) {
+            if (defaultWorkSheet.getRow(i).getCell(0).toString().substringBefore(".") == firstStrikePrice.toString()) {
+                rowNumber = i;
+            }
+        }
         for (value in callDataMap.toSortedMap()) {
-            val currentRow = defaultWorkSheet.createRow(rowNumber)
-            currentRow.createCell(0).setCellValue(0.0 + value.key.toInt())
-            currentRow.createCell(1).setCellValue(0.0 + value.value.changeInOPenInterest!!)
-            currentRow.createCell(2).setCellValue(0.0 + putDataMap[value.key]?.changeInOPenInterest!!)
+            val currentRow = defaultWorkSheet.getRow(rowNumber)
+            currentRow.createCell(1).setCellValue(0.0 + value.key.toInt())
+            currentRow.createCell(2).setCellValue(0.0 + value.value.changeInOPenInterest!!)
+            currentRow.createCell(3).setCellValue(0.0 + putDataMap[value.key]?.changeInOPenInterest!!)
             rowNumber += 1
         }
     }
+
     fun writeMarketDirectionSummaryData(strikePriceArray: IntArray) {
         // read data from the RAW_DATA Sheet
         defaultWorkSheet = workbook.getSheet("RAW_DATA")
@@ -499,33 +540,39 @@ private fun writeSummaryData(
                 count += 1
             }
         }
-        logger.debug(dataEntryList)
+        logger.debug(dataEntryList.asList())
         val oiDataMap = HashMap<Int, ChangeOIData>(dataEntryList.size)
         for (dataEntry in dataEntryList) {
             var totalCallVolume = 0
             var totalPutVolume = 0
-            var timeStamp=0
-            var underlyingValue=0
+            var timeStamp = 0
+            var underlyingValue = 0
             val firstRow = defaultWorkSheet.getRow(0).lastCellNum
             for (cellNumber in 0..firstRow) {
                 var cellValue = defaultWorkSheet.getRow(0).getCell(cellNumber)?.stringCellValue
-                var dataFound=false
+                var dataFound = false
                 if (cellValue != null && cellValue.contains("$dataEntry.TIME_")) {
 
                     val lastRow: Int = defaultWorkSheet.lastRowNum
                     for (value in strikePriceArray) {
+
                         for (i in 1..lastRow) {
-                            val strikePrice =
-                                defaultWorkSheet.getRow(i).getCell(cellNumber).toString().substringBefore(".")
-                            val callVolume = defaultWorkSheet.getRow(i).getCell(cellNumber + 1).toString().substringBefore(".")
-                            val putVolume = defaultWorkSheet.getRow(i).getCell(cellNumber + 2).toString().substringBefore(".")
-                            if (strikePrice == value.toString()) {
+                            val currentRow = defaultWorkSheet.getRow(i)
+                            if (currentRow.getCell(cellNumber) != null && currentRow.getCell(cellNumber).toString()
+                                    .substringBefore(".").contains(value.toString())
+                            ) {
+                                val callVolume = currentRow.getCell(cellNumber + 1).toString().substringBefore(".")
+                                val putVolume = currentRow.getCell(cellNumber + 2).toString().substringBefore(".")
                                 totalCallVolume += callVolume.toInt()
                                 totalPutVolume += putVolume.toInt()
-                                timeStamp = defaultWorkSheet.getRow(0).getCell(cellNumber).toString().substringAfter("_").substringBefore("-").toInt()
-                                underlyingValue=defaultWorkSheet.getRow(0).getCell(cellNumber).toString().substringAfter("_").substringAfter("-").toInt()
-                                oiDataMap[dataEntry]=
-                                    ChangeOIData(underlyingValue,timeStamp,totalCallVolume,totalPutVolume)
+                                timeStamp =
+                                    defaultWorkSheet.getRow(0).getCell(cellNumber).toString().substringAfter("_")
+                                        .substringBefore("-").toInt()
+                                underlyingValue =
+                                    defaultWorkSheet.getRow(0).getCell(cellNumber).toString().substringAfter("_")
+                                        .substringAfter("-").toInt()
+                                oiDataMap[dataEntry] =
+                                    ChangeOIData(underlyingValue, timeStamp, totalCallVolume, totalPutVolume)
                                 dataFound = true
                                 break
                             }
@@ -534,7 +581,7 @@ private fun writeSummaryData(
 
                 }
 
-                if(dataFound){
+                if (dataFound) {
                     break
                 }
             }
@@ -545,31 +592,31 @@ private fun writeSummaryData(
     }
 
     private fun writeOIData(oiDataMap: HashMap<Int, ChangeOIData>) {
-        currentWorksheet ="MARKET_DIRECTION"
+        currentWorksheet = "MARKET_DIRECTION"
         if (workbook.getSheetName(1).equals("MARKET_DIRECTION_SAMPLE")) {
             val inputStream = FileInputStream(fileName)
             workbook = XSSFWorkbook(inputStream)
             workbook.setSheetName(1, currentWorksheet)
             defaultWorkSheet = workbook.getSheet(currentWorksheet)
             logger.debug("Selected Sheet: $defaultWorkSheet")
-            var currentRow=1
-            for (oiData in oiDataMap){
-                val time=oiData.value.timeStamp
-                val underliningValue=oiData.value.currentUnderlyingValue
+            var currentRow = 1
+            for (oiData in oiDataMap) {
+                val time = oiData.value.timeStamp
+                val underliningValue = oiData.value.currentUnderlyingValue
 
-                val totalCallOiChange=oiData.value.callChangeOI
-                val totalPutOiChange=oiData.value.putchangeOI
+                val totalCallOiChange = oiData.value.callChangeOI
+                val totalPutOiChange = oiData.value.putchangeOI
 
                 val row = defaultWorkSheet.createRow(currentRow)
-                row.createCell(0).setCellValue(time!!+0.00)
-                row.createCell(1).setCellValue(underliningValue!!+0.00)
+                row.createCell(0).setCellValue(time!! + 0.00)
+                row.createCell(1).setCellValue(underliningValue!! + 0.00)
 
-                row.createCell(2).setCellValue(totalCallOiChange!!+0.00)
-                row.createCell(3).setCellValue(totalPutOiChange!!+0.00)
+                row.createCell(2).setCellValue(totalCallOiChange!! + 0.00)
+                row.createCell(3).setCellValue(totalPutOiChange!! + 0.00)
 
 //                row.createCell(4).setCellValue((totalPutOiChange!!-totalCallOiChange!!)+0.00)
                 val totalOpenInterestChange = row.createCell(4)
-                val totalChangeInOpenInterest = 0.00+totalPutOiChange - totalCallOiChange
+                val totalChangeInOpenInterest = 0.00 + totalPutOiChange - totalCallOiChange
                 totalOpenInterestChange.setCellValue(totalChangeInOpenInterest)
                 val tradeSignalCell = row.createCell(5)
                 if (setStyle(totalOpenInterestChange, totalChangeInOpenInterest)) {
@@ -581,28 +628,28 @@ private fun writeSummaryData(
 
                 }
             }
-        }  else {
+        } else {
             defaultWorkSheet = workbook.getSheet(currentWorksheet)
             logger.debug("Retrieving Sheet: $currentWorksheet")
             val inputStream = FileInputStream(fileName)
             workbook = XSSFWorkbook(inputStream)
             val currentWorksheet = workbook.getSheet(currentWorksheet)
             //write OI Data
-            var currentRow=1
-            for (oiData in oiDataMap){
-                val time=oiData.value.timeStamp
-                val underliningValue=oiData.value.currentUnderlyingValue
-                val totalCallOiChange=oiData.value.callChangeOI
-                val totalPutOiChange=oiData.value.putchangeOI
+            var currentRow = 1
+            for (oiData in oiDataMap) {
+                val time = oiData.value.timeStamp
+                val underliningValue = oiData.value.currentUnderlyingValue
+                val totalCallOiChange = oiData.value.callChangeOI
+                val totalPutOiChange = oiData.value.putchangeOI
 
                 val row = currentWorksheet.createRow(currentRow)
-                row.createCell(0).setCellValue(time!!+0.00)
-                row.createCell(1).setCellValue(underliningValue!!+0.00)
+                row.createCell(0).setCellValue(time!! + 0.00)
+                row.createCell(1).setCellValue(underliningValue!! + 0.00)
 
-                row.createCell(2).setCellValue(totalCallOiChange!!+0.00)
-                row.createCell(3).setCellValue(totalPutOiChange!!+0.00)
+                row.createCell(2).setCellValue(totalCallOiChange!! + 0.00)
+                row.createCell(3).setCellValue(totalPutOiChange!! + 0.00)
                 val totalOpenInterestChange = row.createCell(4)
-                val totalChangeInOpenInterest = 0.00+totalPutOiChange - totalCallOiChange
+                val totalChangeInOpenInterest = 0.00 + totalPutOiChange - totalCallOiChange
                 totalOpenInterestChange.setCellValue(totalChangeInOpenInterest)
                 val tradeSignalCell = row.createCell(5)
                 if (setStyle(totalOpenInterestChange, totalChangeInOpenInterest)) {
