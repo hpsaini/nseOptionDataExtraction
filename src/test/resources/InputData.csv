@@ -1,0 +1,3 @@
+script,symbol,strikePrice,expiryDate,pointDifference,strikePriceVariation
+ExtractDerivativeData,NIFTY,16250,12-Aug-2021,50,8
+ExtractDerivativeData,BANKNIFTY,36000,12-Aug-2021,100,8

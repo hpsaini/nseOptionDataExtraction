@@ -1,0 +1,52 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'kotlin'
+buildscript {
+
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.32"
+    }
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    implementation 'org.testng:testng:7.1.0'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    // https://mvnrepository.com/artifact/io.rest-assured/rest-assured
+    implementation group: 'io.rest-assured', name: 'rest-assured', version: '4.4.0'
+    // https://mvnrepository.com/artifact/org.testng/testng
+    implementation group: 'org.testng', name: 'testng', version: '7.4.0'
+    // https://mvnrepository.com/artifact/log4j/log4j
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.4.1'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.4.1'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.4.1'
+    implementation group: 'org.json', name: 'json', version: '20201115'
+    implementation group: 'org.apache.poi', name: 'poi', version: '3.13'
+    implementation group: 'org.apache.poi', name: 'poi-ooxml', version: '3.13'
+    implementation group: 'com.opencsv', name: 'opencsv', version: '5.5.1'
+
+}
+
+test {
+    useTestNG() {
+
+        scanForTestClasses = false
+        useDefaultListeners = true
+        // runlist to executed. path is relative to current folder
+        suites '/src/test/testng.xml'
+    }
+
+}
