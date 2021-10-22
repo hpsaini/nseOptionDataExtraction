@@ -72,7 +72,9 @@ class ExtractDerivativeData constructor() {
     constructor(currentTestData: HashMap<String, String>) : this() {
         testDataMap = currentTestData
         logger.debug("In Constructor; Test Data : $currentTestData")
+
     }
+
 
     @Test
     fun fetchDerivativeData() {
@@ -196,6 +198,7 @@ class ExtractDerivativeData constructor() {
             Assert.fail()
         }
     }
+
 
     private fun getAPIData() {
         var count = 1

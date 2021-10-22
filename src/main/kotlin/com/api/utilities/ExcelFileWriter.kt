@@ -2,7 +2,10 @@ package com.api.utilities
 
 import com.api.constants.ProjectProperties
 import org.apache.log4j.Logger
-import org.apache.poi.ss.usermodel.*
+import org.apache.poi.ss.usermodel.Cell
+import org.apache.poi.ss.usermodel.IndexedColors
+import org.apache.poi.ss.usermodel.Row
+import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.xssf.usermodel.XSSFRow
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.testng.Assert
@@ -101,6 +104,7 @@ class ExcelFileWriter(
             val fos = FileOutputStream(fileName)
             workbook.write(fos)
             fos.close()
+            excelToHtml() // todo add at right point
         } catch (e: FileNotFoundException) {
             e.printStackTrace()
         }
@@ -665,6 +669,54 @@ class ExcelFileWriter(
             }
             commit(strikePrice.toInt())
 
+        }
+    }
+
+    fun excelToHtml(){
+        try {
+            val file = FileInputStream(File(fileName))
+            val htmlGenerator = HtmlGenerator()
+            //Create Workbook instance holding reference to .xlsx file
+            val workbook = XSSFWorkbook(file)
+
+            //Get first/desired sheet from the workbook
+
+            val sheet = workbook.getSheetAt(0)
+
+            //Iterate through each rows one by one
+            val rowIterator: Iterator<Row> = sheet.iterator()
+            var sheetTableData = ""
+            var rowData = ""
+            var cellItem = ""
+            while (rowIterator.hasNext()) {
+                rowData = ""
+                val row = rowIterator.next()
+                //For each row, iterate through all the columns
+                val cellIterator = row.cellIterator()
+                while (cellIterator.hasNext()) {
+                    val cell = cellIterator.next()
+                    when (cell.cellType) {
+                        Cell.CELL_TYPE_NUMERIC -> {
+                            cellItem = cell.numericCellValue.toString()
+                        }
+                        Cell.CELL_TYPE_STRING -> {
+                            cellItem = cell.stringCellValue.toString()
+                        }
+                    }
+                    rowData += "<td>$cellItem</td>"
+                }
+                sheetTableData += "<tr>$rowData</tr>"
+
+            }
+
+            file.close()
+            sheetTableData = "<table>$sheetTableData</table>"
+            htmlGenerator.addTable(tableString = sheetTableData)
+                .addChart(xValues = "1,2,3,4,5,6",yValues = "1,4,6,7,8" , "Sample chart")
+                .build()
+
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
         }
     }
 
